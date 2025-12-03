@@ -1,35 +1,19 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Stack } from "expo-router";
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
+export default function RootLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
+    <Stack>
+      {/* Auth */}
+      <Stack.Screen name="auth/LoginScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/RegisterScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/ForgotPassword" options={{ headerShown: false }} />
+
+      {/* Pages principales */}
+      <Stack.Screen name="home" options={{ headerShown: false }} />
+      <Stack.Screen name="camera-screen" options={{ headerShown: false }} />
+      <Stack.Screen name="recipe-result" options={{ headerShown: false }} />
+      <Stack.Screen name="planning" options={{ headerShown: false }} />
+      <Stack.Screen name="profile" options={{ headerShown: false }} />
+    </Stack>
   );
 }
