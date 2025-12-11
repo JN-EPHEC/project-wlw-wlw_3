@@ -24,7 +24,7 @@ export default function RecipeResultScreen() {
     ingredient?: string;
   }>();
 
-  // 🔥 La recette reçue est déjà complète → pas besoin d'OpenAI ici
+  // 🔥 Recette déjà complète → pas d'appel OpenAI
   const decodedRecipe =
     Array.isArray(recipe) ? recipe[0] : recipe || "Aucune recette générée.";
 
@@ -34,11 +34,9 @@ export default function RecipeResultScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [duration, setDuration] = useState("");
 
-  // 🔥 Plus AUCUNE requête OpenAI → juste remplir la recette directement
   useEffect(() => {
     setFinalRecipe(decodedRecipe);
 
-    // détecte automatiquement un ingrédient à partir du titre
     const firstLine = decodedRecipe.split("\n")[0] || "";
     const extracted = firstLine.replace("##", "").trim();
     if (extracted.length > 0) setIngredient(extracted);
@@ -86,6 +84,7 @@ export default function RecipeResultScreen() {
         return;
       }
 
+      // 🔥 1) Sauvegarde dans RECIPES
       await setDoc(
         doc(db, "users", user.uid, "recipes", newRecipe.id.toString()),
         {
@@ -94,6 +93,20 @@ export default function RecipeResultScreen() {
         }
       );
 
+      // 🔥🔥 2) ➕ AJOUT pour HISTORY (NOUVEAU, demandé)
+      await setDoc(
+        doc(db, "users", user.uid, "history", newRecipe.id.toString()),
+        {
+          recipeId: newRecipe.id,
+          title: newRecipe.title,
+          ingredient: newRecipe.ingredient,
+          fullRecipe: finalRecipe,
+          generatedAt: today.toISOString(),
+          createdAt: serverTimestamp(),
+        }
+      );
+
+      // stockage local
       const stored = await AsyncStorage.getItem("recipes");
       const parsed = stored ? JSON.parse(stored) : [];
       parsed.push(newRecipe);

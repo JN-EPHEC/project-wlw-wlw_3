@@ -1,15 +1,19 @@
 import { Picker } from "@react-native-picker/picker";
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { signOut } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
+
+import { Ionicons } from "@expo/vector-icons";
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { auth, db } from "../firebase/config";
 
@@ -69,62 +73,9 @@ export default function ProfileScreen() {
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [showMoreAllergies, setShowMoreAllergies] = useState(false);
 
-  // ✅ Abonnement
-  const [subscriptionPlan, setSubscriptionPlan] = useState<"free" | "premium">(
-    "free"
-  );
-
-  // ✅ Charger Firestore (profil + metrics + allergies + abonnement)
-  useEffect(() => {
-    const loadUserData = async () => {
-      if (!uid) return;
-
-      // Profil
-      const profileRef = doc(db, "users", uid, "profile", "info");
-      const profileSnap = await getDoc(profileRef);
-
-      if (profileSnap.exists()) {
-        const data = profileSnap.data();
-        setFirstname(data.firstname || "");
-        setGoal(data.goal || "Perte de poids");
-
-        if (data.birthDate) {
-          const [d, m, y] = data.birthDate.split("/");
-          setBirthDay(d);
-          setBirthMonth(m);
-          setBirthYear(y);
-        }
-      }
-
-      // Metrics
-      const bodyRef = doc(db, "users", uid, "body", "metrics");
-      const bodySnap = await getDoc(bodyRef);
-
-      if (bodySnap.exists()) {
-        const data = bodySnap.data();
-        setHeight(data.height || null);
-        setWeight(data.weight || null);
-      }
-
-      // Allergies
-      const allergyRef = doc(db, "users", uid, "allergies", "list");
-      const allergySnap = await getDoc(allergyRef);
-
-      if (allergySnap.exists()) {
-        setSelectedAllergies(allergySnap.data().values || []);
-      }
-
-      // ✅ Abonnement
-      const subRef = doc(db, "users", uid, "subscription", "status");
-      const subSnap = await getDoc(subRef);
-      if (subSnap.exists()) {
-        const data = subSnap.data();
-        setSubscriptionPlan(data.isPremium ? "premium" : "free");
-      }
-    };
-
-    loadUserData();
-  }, []);
+  // Abonnement
+  const [subscriptionPlan, setSubscriptionPlan] =
+    useState<"free" | "premium">("free");
 
   const toggleAllergy = (a: string) => {
     setSelectedAllergies((prev) =>
@@ -132,7 +83,66 @@ export default function ProfileScreen() {
     );
   };
 
-  // ✅ Sauvegarde structurée dans Firestore
+  // Chargement depuis TES collections Firestore
+  const loadUserData = async () => {
+    if (!uid) return;
+
+    // Profil
+    const profileRef = doc(db, "users", uid, "profile", "info");
+    const profileSnap = await getDoc(profileRef);
+
+    if (profileSnap.exists()) {
+      const data = profileSnap.data();
+      setFirstname(data.firstname || "");
+      setGoal(data.goal || "Perte de poids");
+
+      if (data.birthDate) {
+        const [d, m, y] = data.birthDate.split("/");
+        setBirthDay(d);
+        setBirthMonth(m);
+        setBirthYear(y);
+      }
+    }
+
+    // Metrics
+    const bodyRef = doc(db, "users", uid, "body", "metrics");
+    const bodySnap = await getDoc(bodyRef);
+
+    if (bodySnap.exists()) {
+      const data = bodySnap.data();
+      setHeight(data.height || null);
+      setWeight(data.weight || null);
+    }
+
+    // Allergies
+    const allergyRef = doc(db, "users", uid, "allergies", "list");
+    const allergySnap = await getDoc(allergyRef);
+
+    if (allergySnap.exists()) {
+      setSelectedAllergies(allergySnap.data().values || []);
+    }
+
+    // Subscription
+    const subRef = doc(db, "users", uid, "subscription", "status");
+    const subSnap = await getDoc(subRef);
+
+    if (subSnap.exists()) {
+      const data = subSnap.data();
+      setSubscriptionPlan(data.isPremium ? "premium" : "free");
+    }
+  };
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUserData();
+    }, [])
+  );
+
+  // Sauvegarde dans TES collections
   const saveProfile = async () => {
     if (!uid) return;
 
@@ -171,11 +181,12 @@ export default function ProfileScreen() {
       { merge: true }
     );
 
-    // ✅ Sauvegarder abonnement
+    // Subscription
     await setDoc(
       doc(db, "users", uid, "subscription", "status"),
       {
         isPremium: subscriptionPlan === "premium",
+        updatedAt: new Date().toISOString(),
       },
       { merge: true }
     );
@@ -193,12 +204,19 @@ export default function ProfileScreen() {
     }
   };
 
-  // Options tailles et poids
   const heightOptions = Array.from({ length: 111 }, (_, i) => 120 + i);
   const weightOptions = Array.from({ length: 291 }, (_, i) => 10 + i);
 
   return (
     <ScrollView style={styles.container}>
+       <Pressable
+       onPress={() => router.back()}
+       style={{ flexDirection: "row", alignItems: "center", marginBottom: 15 }}
+       >
+       <Ionicons name="arrow-back" size={24} color="#000" />
+       <Text style={{ marginLeft: 6, fontSize: 16 }}>Retour</Text>
+       </Pressable>
+
       <Text style={styles.title}>Mon Profil</Text>
 
       {/* Prénom */}
@@ -214,7 +232,6 @@ export default function ProfileScreen() {
       <Text style={styles.label}>Date de naissance</Text>
 
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        {/* Jour */}
         <Picker
           style={[styles.picker, { flex: 1, marginRight: 5 }]}
           selectedValue={birthDay}
@@ -226,7 +243,6 @@ export default function ProfileScreen() {
           ))}
         </Picker>
 
-        {/* Mois */}
         <Picker
           style={[styles.picker, { flex: 1, marginHorizontal: 5 }]}
           selectedValue={birthMonth}
@@ -251,7 +267,6 @@ export default function ProfileScreen() {
           ))}
         </Picker>
 
-        {/* Année */}
         <Picker
           style={[styles.picker, { flex: 1, marginLeft: 5 }]}
           selectedValue={birthYear}
@@ -260,14 +275,20 @@ export default function ProfileScreen() {
           <Picker.Item label="Année" value="" />
           {[...Array(100)].map((_, i) => {
             const year = 2025 - i;
-            return <Picker.Item key={year} label={`${year}`} value={`${year}`} />;
+            return (
+              <Picker.Item key={year} label={`${year}`} value={`${year}`} />
+            );
           })}
         </Picker>
       </View>
 
       {/* Taille */}
       <Text style={styles.label}>Taille (cm)</Text>
-      <Picker selectedValue={height} onValueChange={setHeight} style={styles.picker}>
+      <Picker
+        selectedValue={height}
+        onValueChange={setHeight}
+        style={styles.picker}
+      >
         <Picker.Item label="Sélectionnez votre taille" value={null} />
         {heightOptions.map((h) => (
           <Picker.Item key={h} label={`${h} cm`} value={h} />
@@ -276,7 +297,11 @@ export default function ProfileScreen() {
 
       {/* Poids */}
       <Text style={styles.label}>Poids (kg)</Text>
-      <Picker selectedValue={weight} onValueChange={setWeight} style={styles.picker}>
+      <Picker
+        selectedValue={weight}
+        onValueChange={setWeight}
+        style={styles.picker}
+      >
         <Picker.Item label="Sélectionnez votre poids" value={null} />
         {weightOptions.map((w) => (
           <Picker.Item key={w} label={`${w} kg`} value={w} />
@@ -325,7 +350,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         ))}
 
-        {/* Autres */}
         <TouchableOpacity
           style={styles.tagOther}
           onPress={() => setShowMoreAllergies(!showMoreAllergies)}
@@ -356,10 +380,10 @@ export default function ProfileScreen() {
           ))}
       </View>
 
-      {/* ✅ Section ABONNEMENT */}
+      {/* Abonnement */}
       <Text style={styles.sectionTitle}>Type d’abonnement</Text>
 
-      {/* Modèle gratuit */}
+      {/* Free */}
       <TouchableOpacity
         style={[
           styles.subCard,
@@ -370,16 +394,19 @@ export default function ProfileScreen() {
         <Text style={styles.subTitle}>Modèle Gratuit — 0€</Text>
         <Text style={styles.subBullet}>• 2 recettes max par semaine</Text>
         <Text style={styles.subBullet}>• Objectifs adaptés</Text>
-        <Text style={styles.subBullet}>• Historique des recettes</Text>
+        <Text style={styles.subBullet}>• Historique des recettes (recette supprimée après 7 jours)</Text>
       </TouchableOpacity>
 
-      {/* Modèle premium */}
+      {/* Premium */}
       <TouchableOpacity
         style={[
           styles.subCard,
           subscriptionPlan === "premium" && styles.subSelected,
         ]}
-        onPress={() => setSubscriptionPlan("premium")}
+        onPress={() => {
+          setSubscriptionPlan("premium");
+          router.push("/premium-payment");
+        }}
       >
         <Text style={styles.subTitle}>Premium — 4,99€/mois</Text>
         <Text style={styles.subBullet}>• Recettes illimitées</Text>
@@ -472,7 +499,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#eee",
   },
 
-  /* ✅ Styles abonnements */
   subCard: {
     backgroundColor: "#fff",
     borderWidth: 1,

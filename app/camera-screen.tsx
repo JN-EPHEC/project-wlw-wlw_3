@@ -78,7 +78,7 @@ export default function CameraScreen() {
 
       // Limite si pas premium
       if (!sub.isPremium) {
-        if (sub.recipesThisWeek >= 2) {
+        if (sub.recipesThisWeek >= 3) {
           Alert.alert(
             "Limite atteinte",
             "Tu as utilisé toutes tes recettes gratuites de la semaine.\nPasse Premium pour générer sans limite ✅"
