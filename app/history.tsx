@@ -17,6 +17,7 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  setDoc,
 } from "firebase/firestore";
 import { auth, db } from "./firebase/config";
 
@@ -28,7 +29,8 @@ interface HistoryItem {
   title: string;
   ingredient: string;
   fullRecipe: string;
-  generatedAt: string; // date ISO
+  generatedAt: string;
+  favorite?: boolean; // ⭐ FAVORIS
 }
 
 /* -----------------------------------
@@ -37,6 +39,7 @@ interface HistoryItem {
 export default function HistoryScreen() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [search, setSearch] = useState("");
+  const [isPremium, setIsPremium] = useState<boolean>(false); // ⭐ AJOUTÉ
   const router = useRouter();
 
   /* -----------------------------------
@@ -51,33 +54,42 @@ export default function HistoryScreen() {
         const historyRef = collection(db, "users", user.uid, "history");
         const snap = await getDocs(historyRef);
 
+        // Charger favoris depuis RECIPES
+        const recipeSnap = await getDocs(
+          collection(db, "users", user.uid, "recipes")
+        );
+        const favoritesMap: Record<string, boolean> = {};
+        recipeSnap.docs.forEach((d) => {
+          const data = d.data() as any;
+          favoritesMap[d.id] = data.favorite === true;
+        });
+
         const items: HistoryItem[] = snap.docs.map((d) => {
           const data = d.data() as Omit<HistoryItem, "id">;
           return {
             id: d.id,
             ...data,
+            favorite: favoritesMap[d.id] ?? false,
           };
         });
 
-        // Vérifier abonnement
+        // Vérifier abonnement PREMIUM ⭐⭐⭐ AJOUTÉ
         const subSnap = await getDocs(
           collection(db, "users", user.uid, "subscription")
         );
-
-        const isPremium = subSnap.docs.some(
+        const premium = subSnap.docs.some(
           (docSnap) => docSnap.data().isPremium === true
         );
+        setIsPremium(premium); // 🔥 SAUVEGARDE PREMIUM
 
-        // Si premium → pas de nettoyage
-        if (isPremium) {
+        if (premium) {
           setHistory(items);
           return;
         }
 
-        // Nettoyage automatique (Free → 7 jours max)
+        // Nettoyage auto 7 jours pour FREE
         const now = Date.now();
-
-        const filtered = [];
+        const filtered: HistoryItem[] = [];
 
         for (const item of items) {
           const createdTime = new Date(item.generatedAt).getTime();
@@ -86,16 +98,11 @@ export default function HistoryScreen() {
           if (diffDays <= 7) {
             filtered.push(item);
           } else {
-            // Supprimer côté Firestore
-            await deleteDoc(
-              doc(db, "users", user.uid, "history", item.id)
-            );
+            await deleteDoc(doc(db, "users", user.uid, "history", item.id));
           }
         }
 
         setHistory(filtered);
-
-        // Backup local
         await AsyncStorage.setItem("history", JSON.stringify(filtered));
       } catch (err) {
         console.log("Erreur Firestore → fallback AsyncStorage");
@@ -107,6 +114,32 @@ export default function HistoryScreen() {
 
     load();
   }, []);
+
+  /* -----------------------------------
+            TOGGLE FAVORIS ⭐
+  ------------------------------------ */
+  const toggleFavorite = async (item: HistoryItem) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const recipeRef = doc(db, "users", user.uid, "recipes", item.id);
+
+      await setDoc(
+        recipeRef,
+        { favorite: !item.favorite },
+        { merge: true }
+      );
+
+      setHistory((prev) =>
+        prev.map((h) =>
+          h.id === item.id ? { ...h, favorite: !item.favorite } : h
+        )
+      );
+    } catch (err) {
+      console.log("Erreur toggle favoris :", err);
+    }
+  };
 
   /* -----------------------------------
       BARRE DE RECHERCHE + FILTRE
@@ -150,12 +183,24 @@ export default function HistoryScreen() {
               params: {
                 recipe: item.fullRecipe,
                 title: item.title,
+                id: item.id, // ⚠️ IMPORTANT pour les favoris dans full-recipe
               },
             })
           }
         >
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>{item.title}</Text>
+
+            {/* ⭐ ICON FAVORIS — UNIQUEMENT PREMIUM ⭐⭐⭐ */}
+            {isPremium && (
+              <TouchableOpacity onPress={() => toggleFavorite(item)}>
+                <Ionicons
+                  name={item.favorite ? "star" : "star-outline"}
+                  size={24}
+                  color="#F5B000"
+                />
+              </TouchableOpacity>
+            )}
           </View>
 
           <Text style={styles.cardIngredient}>
@@ -227,11 +272,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 6,
+    alignItems: "center",
   },
 
   cardTitle: {
     fontSize: 16,
     fontWeight: "bold",
+    flex: 1,
+    paddingRight: 10,
   },
 
   cardIngredient: {

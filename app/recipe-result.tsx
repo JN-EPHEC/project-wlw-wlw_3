@@ -89,6 +89,7 @@ export default function RecipeResultScreen() {
         doc(db, "users", user.uid, "recipes", newRecipe.id.toString()),
         {
           ...newRecipe,
+          favorite: false,
           createdAt: serverTimestamp(),
         }
       );

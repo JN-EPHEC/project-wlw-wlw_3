@@ -1,19 +1,69 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React from "react";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { auth, db } from "./firebase/config";
 
 export default function FullRecipeScreen() {
   const router = useRouter();
-  const { recipe, title } = useLocalSearchParams<{
+
+  const params = useLocalSearchParams<{
     recipe?: string;
     title?: string;
+    id?: string; // 🔥 ID indispensable pour gérer le favori
   }>();
 
+  const recipeId = Array.isArray(params.id) ? params.id[0] : params.id || null;
+
   const finalRecipe =
-    Array.isArray(recipe) ? recipe[0] : recipe || "Recette introuvable.";
+    Array.isArray(params.recipe) ? params.recipe[0] : params.recipe || "Recette introuvable.";
+
   const recipeTitle =
-    Array.isArray(title) ? title[0] : title || "Recette";
+    Array.isArray(params.title) ? params.title[0] : params.title || "Recette";
+
+  const [favorite, setFavorite] = useState<boolean>(false);
+  const [isPremium, setIsPremium] = useState<boolean>(false);
+
+  /* --------------------------------------------------------
+     🔥 Charger état Premium + Favori dans Firestore
+  -------------------------------------------------------- */
+  useEffect(() => {
+    const loadData = async () => {
+      const user = auth.currentUser;
+      if (!user || !recipeId) return;
+
+      // Vérifier statut Premium
+      const subSnap = await getDoc(doc(db, "users", user.uid, "subscription", "status"));
+      if (subSnap.exists()) {
+        setIsPremium(subSnap.data().isPremium === true);
+      }
+
+      // Charger le statut favori
+      const recipeSnap = await getDoc(doc(db, "users", user.uid, "recipes", recipeId));
+      if (recipeSnap.exists()) {
+        setFavorite(recipeSnap.data().favorite === true);
+      }
+    };
+
+    loadData();
+  }, [recipeId]);
+
+  /* --------------------------------------------------------
+     ⭐ Toggle Favori (Premium uniquement)
+  -------------------------------------------------------- */
+  const toggleFavorite = async () => {
+    const user = auth.currentUser;
+    if (!user || !recipeId) return;
+
+    await setDoc(
+      doc(db, "users", user.uid, "recipes", recipeId),
+      { favorite: !favorite },
+      { merge: true }
+    );
+
+    setFavorite(!favorite);
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -25,7 +75,18 @@ export default function FullRecipeScreen() {
 
         <Text style={styles.headerTitle}>Recette complète</Text>
 
-        <View style={{ width: 30 }} />
+        {/* ⭐ Icône Favori (Seulement Premium) */}
+        {isPremium ? (
+          <TouchableOpacity onPress={toggleFavorite}>
+            <Ionicons
+              name={favorite ? "star" : "star-outline"}
+              size={28}
+              color={favorite ? "#e6b800" : "#2EB872"}
+            />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 30 }} />
+        )}
       </View>
 
       {/* Titre */}
@@ -54,6 +115,13 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
 
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#2EB872",
+  },
+
   title: {
     fontSize: 22,
     fontWeight: "bold",
@@ -67,32 +135,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     elevation: 3,
   },
-  
-headerTitle: {
-  fontSize: 24,
-  fontWeight: "bold",
-  textAlign: "center",
-  marginBottom: 20,
-  color: "#2EB872",
-},
 
   recipeText: {
     fontSize: 15,
     lineHeight: 22,
     color: "#333",
     flexWrap: "wrap",
-  },
-
-  button: {
-    backgroundColor: "#2EB872",
-    padding: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    marginTop: 20,
-  },
-
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
   },
 });

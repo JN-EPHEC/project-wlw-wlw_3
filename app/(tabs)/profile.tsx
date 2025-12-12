@@ -2,7 +2,7 @@ import { Picker } from "@react-native-picker/picker";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { signOut } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -206,6 +206,47 @@ export default function ProfileScreen() {
 
   const heightOptions = Array.from({ length: 111 }, (_, i) => 120 + i);
   const weightOptions = Array.from({ length: 291 }, (_, i) => 10 + i);
+
+const deleteAccount = async () => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const uid = user.uid;
+
+    // Supprimer les sous-collections (profile, body, allergies, subscription, recipes, history)
+    const collectionsToDelete = [
+      "profile",
+      "body",
+      "allergies",
+      "subscription",
+      "recipes",
+      "history",
+    ];
+
+    for (const col of collectionsToDelete) {
+      const ref = collection(db, "users", uid, col);
+      const snap = await getDocs(ref);
+
+      for (const d of snap.docs) {
+        await deleteDoc(doc(db, "users", uid, col, d.id));
+      }
+    }
+
+    // Supprimer le dossier utilisateur
+    await deleteDoc(doc(db, "users", uid));
+
+    // Supprimer du système d'authentification
+    await user.delete();
+
+    alert("Votre compte a été entièrement supprimé.");
+    router.replace("/auth/LoginScreen");
+
+  } catch (err) {
+    console.log("Erreur suppression compte :", err);
+    alert("Erreur lors de la suppression du compte.");
+  }
+};
 
   return (
     <ScrollView style={styles.container}>
@@ -425,6 +466,14 @@ export default function ProfileScreen() {
       <TouchableOpacity onPress={logout} style={styles.logout}>
         <Text style={styles.logoutText}>Déconnexion</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity
+  onPress={deleteAccount}
+  style={styles.deleteAccountBtn}
+>
+  <Text style={styles.deleteAccountText}>Supprimer mon compte</Text>
+</TouchableOpacity>
+
     </ScrollView>
   );
 }
@@ -521,6 +570,20 @@ const styles = StyleSheet.create({
     color: "#444",
     marginBottom: 3,
   },
+
+  deleteAccountBtn: {
+  backgroundColor: "red",
+  padding: 16,
+  borderRadius: 10,
+  alignItems: "center",
+  marginBottom: 40,
+},
+
+deleteAccountText: {
+  color: "#fff",
+  fontWeight: "bold",
+  fontSize: 16,
+},
 
   saveButton: {
     backgroundColor: "#26A65B",

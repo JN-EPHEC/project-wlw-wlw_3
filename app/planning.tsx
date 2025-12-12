@@ -13,7 +13,7 @@ import {
 } from "react-native";
 
 // 🔥 FIREBASE
-import { collection, deleteDoc, doc, getDocs } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs } from "firebase/firestore";
 import { auth, db } from "./firebase/config";
 
 interface Recipe {
@@ -99,6 +99,30 @@ export default function PlanningScreen() {
     (r) => getDaysLeft(r.expiryDate) <= 3
   ).length;
 
+  // 🔥 NOUVEAU → voir la recette complète depuis l’historique
+  const openFullRecipe = async (id: number) => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const ref = doc(db, "users", user.uid, "history", id.toString());
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      Alert.alert("Recette introuvable", "Cette recette n'existe pas dans votre historique.");
+      return;
+    }
+
+    const data = snap.data();
+
+    router.push({
+      pathname: "/full-recipe",
+      params: {
+        title: data.title,
+        recipe: data.fullRecipe,
+      },
+    });
+  };
+
   const renderRecipe = ({ item }: { item: Recipe }) => {
     const daysLeft = getDaysLeft(item.expiryDate);
     const bgColor = getColor(daysLeft);
@@ -133,6 +157,15 @@ export default function PlanningScreen() {
         <Text style={[styles.daysLeft, { color }]}>
           {daysLeft > 0 ? `${daysLeft}j restants` : "⚠️ Expirée !"}
         </Text>
+
+        {/* 🔥 BOUTON VOIR RECETTE COMPLÈTE */}
+        <TouchableOpacity
+          style={[styles.viewButton, { borderColor: color }]}
+          onPress={() => openFullRecipe(item.id)}
+        >
+          <Ionicons name="restaurant-outline" size={18} color={color} />
+          <Text style={[styles.viewText, { color }]}>Voir la recette complète</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.doneButton, { backgroundColor: color }]}
@@ -242,6 +275,22 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 10,
   },
+
+  /* 🔥 NOUVEAU BOUTON Voir recette */
+  viewButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderRadius: 8,
+    paddingVertical: 8,
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  viewText: {
+    marginLeft: 6,
+    fontWeight: "600",
+  },
+
   doneButton: {
     flexDirection: "row",
     alignItems: "center",

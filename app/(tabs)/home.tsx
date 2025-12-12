@@ -343,6 +343,19 @@ export default function HomeScreen() {
       {/* --- BOUTONS SECONDAIRES --- */}
 <View style={{ width: "100%", marginTop: 20 }}>
 
+ {/* Ligne Favoris – centrée comme Historique */}
+{subscriptionPlan === "premium" && (
+  <View style={styles.centerRow}>
+    <Pressable
+      style={[styles.bottomButton, { width: "48%", marginTop: 12 }]}
+      onPress={() => router.push("/favorites")}
+    >
+      <Ionicons name="star-outline" size={22} color="#2EB872" />
+      <Text style={styles.bottomText}>Favoris</Text>
+    </Pressable>
+  </View>
+)}
+
   {/* Ligne 1 : Planning + Objectifs */}
   <View style={{ flexDirection: "row", justifyContent: "space-between", width: "100%" }}>
     
