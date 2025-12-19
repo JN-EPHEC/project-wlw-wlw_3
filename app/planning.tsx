@@ -95,9 +95,8 @@ export default function PlanningScreen() {
     return "#188038";
   };
 
-  const urgentCount = recipes.filter(
-    (r) => getDaysLeft(r.expiryDate) <= 3
-  ).length;
+  const urgentCount = recipes.filter((r) => getDaysLeft(r.expiryDate) <= 3)
+    .length;
 
   // 🔥 NOUVEAU → voir la recette complète depuis l’historique
   const openFullRecipe = async (id: number) => {
@@ -108,7 +107,10 @@ export default function PlanningScreen() {
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
-      Alert.alert("Recette introuvable", "Cette recette n'existe pas dans votre historique.");
+      Alert.alert(
+        "Recette introuvable",
+        "Cette recette n'existe pas dans votre historique."
+      );
       return;
     }
 
@@ -119,6 +121,7 @@ export default function PlanningScreen() {
       params: {
         title: data.title,
         recipe: data.fullRecipe,
+        id: id.toString(), // ✅ IMPORTANT : on passe l'ID pour que "Passer en cuisine" fonctionne
       },
     });
   };
@@ -134,7 +137,9 @@ export default function PlanningScreen() {
     });
 
     return (
-      <View style={[styles.card, { backgroundColor: bgColor, borderColor: color }]}>
+      <View
+        style={[styles.card, { backgroundColor: bgColor, borderColor: color }]}
+      >
         <View style={styles.cardHeader}>
           <Text style={styles.recipeTitle}>{item.title}</Text>
           <TouchableOpacity onPress={() => deleteRecipe(item.id)}>
@@ -164,7 +169,9 @@ export default function PlanningScreen() {
           onPress={() => openFullRecipe(item.id)}
         >
           <Ionicons name="restaurant-outline" size={18} color={color} />
-          <Text style={[styles.viewText, { color }]}>Voir la recette complète</Text>
+          <Text style={[styles.viewText, { color }]}>
+            Voir la recette complète
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity

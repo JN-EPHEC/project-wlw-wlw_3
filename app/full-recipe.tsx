@@ -2,7 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { auth, db } from "./firebase/config";
 
 export default function FullRecipeScreen() {
@@ -11,47 +18,51 @@ export default function FullRecipeScreen() {
   const params = useLocalSearchParams<{
     recipe?: string;
     title?: string;
-    id?: string; // 🔥 ID indispensable pour gérer le favori
+    id?: string; // 🔥 id recette (docId dans /recipes)
   }>();
 
   const recipeId = Array.isArray(params.id) ? params.id[0] : params.id || null;
 
-  const finalRecipe =
-    Array.isArray(params.recipe) ? params.recipe[0] : params.recipe || "Recette introuvable.";
+  const finalRecipe = Array.isArray(params.recipe)
+    ? params.recipe[0]
+    : params.recipe || "Recette introuvable.";
 
-  const recipeTitle =
-    Array.isArray(params.title) ? params.title[0] : params.title || "Recette";
+  const recipeTitle = Array.isArray(params.title)
+    ? params.title[0]
+    : params.title || "Recette";
 
   const [favorite, setFavorite] = useState<boolean>(false);
   const [isPremium, setIsPremium] = useState<boolean>(false);
 
-  /* --------------------------------------------------------
-     🔥 Charger état Premium + Favori dans Firestore
-  -------------------------------------------------------- */
+  /** 🔥 Charger Premium + favori */
   useEffect(() => {
     const loadData = async () => {
       const user = auth.currentUser;
-      if (!user || !recipeId) return;
+      if (!user) return;
 
-      // Vérifier statut Premium
-      const subSnap = await getDoc(doc(db, "users", user.uid, "subscription", "status"));
+      // Premium ?
+      const subSnap = await getDoc(
+        doc(db, "users", user.uid, "subscription", "status")
+      );
       if (subSnap.exists()) {
         setIsPremium(subSnap.data().isPremium === true);
       }
 
-      // Charger le statut favori
-      const recipeSnap = await getDoc(doc(db, "users", user.uid, "recipes", recipeId));
-      if (recipeSnap.exists()) {
-        setFavorite(recipeSnap.data().favorite === true);
+      // Favori ?
+      if (recipeId) {
+        const recipeSnap = await getDoc(
+          doc(db, "users", user.uid, "recipes", recipeId)
+        );
+        if (recipeSnap.exists()) {
+          setFavorite(recipeSnap.data().favorite === true);
+        }
       }
     };
 
     loadData();
   }, [recipeId]);
 
-  /* --------------------------------------------------------
-     ⭐ Toggle Favori (Premium uniquement)
-  -------------------------------------------------------- */
+  /** ⭐ Toggle Favori (Premium only) */
   const toggleFavorite = async () => {
     const user = auth.currentUser;
     if (!user || !recipeId) return;
@@ -65,6 +76,28 @@ export default function FullRecipeScreen() {
     setFavorite(!favorite);
   };
 
+  /** 👨‍🍳 Passer en cuisine (Premium only) */
+  const goCookMode = () => {
+    if (!isPremium) return;
+
+    if (!recipeId) {
+      Alert.alert(
+        "Info",
+        "Impossible d’ouvrir le mode cuisine : id de recette manquant."
+      );
+      return;
+    }
+
+    router.push({
+      pathname: "/cook-mode",
+      params: {
+        id: recipeId,
+        title: recipeTitle,
+        recipe: finalRecipe,
+      },
+    });
+  };
+
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
@@ -75,13 +108,13 @@ export default function FullRecipeScreen() {
 
         <Text style={styles.headerTitle}>Recette complète</Text>
 
-        {/* ⭐ Icône Favori (Seulement Premium) */}
+        {/* ⭐ Favori — seulement Premium */}
         {isPremium ? (
           <TouchableOpacity onPress={toggleFavorite}>
             <Ionicons
               name={favorite ? "star" : "star-outline"}
               size={28}
-              color={favorite ? "#e6b800" : "#2EB872"}
+              color={favorite ? "#F5B000" : "#2EB872"}
             />
           </TouchableOpacity>
         ) : (
@@ -96,6 +129,14 @@ export default function FullRecipeScreen() {
       <View style={styles.recipeBox}>
         <Text style={styles.recipeText}>{finalRecipe}</Text>
       </View>
+
+      {/* ✅ Bouton "Passer en cuisine" — Premium only */}
+      {isPremium && (
+        <TouchableOpacity style={styles.cookBtn} onPress={goCookMode}>
+          <Ionicons name="restaurant-outline" size={18} color="#fff" />
+          <Text style={styles.cookBtnText}>Passer en cuisine 👨‍🍳</Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
@@ -116,7 +157,7 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: "bold",
     textAlign: "center",
     color: "#2EB872",
@@ -141,5 +182,22 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: "#333",
     flexWrap: "wrap",
+  },
+
+  cookBtn: {
+    marginTop: 16,
+    backgroundColor: "#2EB872",
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+  },
+
+  cookBtnText: {
+    color: "#fff",
+    fontWeight: "bold",
+    marginLeft: 8,
+    fontSize: 15,
   },
 });
