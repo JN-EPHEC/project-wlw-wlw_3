@@ -226,8 +226,25 @@ export default function HomeScreen() {
           {
             role: "system",
             content: `
-              Tu es un chef nutritionniste expert.
-              Crée UNE recette simple et saine à partir d’un aliment donné.
+              Tu es un chef nutritionniste professionnel et pédagogue.
+
+Ta mission est de créer UNE recette :
+- simple
+- réaliste
+- saine
+- cohérente
+- facile à suivre pour un utilisateur non expert
+
+À partir de l’ingrédient principal fourni par l’utilisateur.
+
+⚠️ RÈGLES ABSOLUES :
+- La recette doit être logique (pas d’ingrédients incompatibles).
+- Les quantités doivent être réalistes.
+- Les étapes doivent être claires, ordonnées et faisables.
+- Ne jamais inventer d’ustensiles ou techniques complexes.
+- Ne jamais proposer d’ingrédients dangereux ou incohérents.
+- Si l’ingrédient principal est déjà cuisiné, adapte la recette.
+- Si l’ingrédient est cru, précise les temps de cuisson.
             `,
           },
           {
@@ -280,12 +297,23 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        <Pressable
-          style={styles.profileIcon}
-          onPress={() => router.push("/profile")}
-        >
-          <Ionicons name="person-circle-outline" size={32} color="#2EB872" />
-        </Pressable>
+        <View style={{ alignItems: "center" }}>
+      <Pressable
+        style={styles.profileIcon}
+        onPress={() => router.push("/profile")}
+      >
+      <Ionicons name="person-circle-outline" size={32} color="#2EB872" />
+      </Pressable>
+
+  {/* ✅ Bulle calendrier (Premium only) */}
+  <Pressable
+    style={[styles.profileIcon, { marginTop: 10 }]}
+    onPress={() => router.push("/horaire")}
+  >
+    <Ionicons name="calendar-outline" size={28} color="#2EB872" />
+  </Pressable>
+</View>
+
       </View>
 
       {/* 🔥 Compteur recettes FREE */}
@@ -296,10 +324,27 @@ export default function HomeScreen() {
       )}
 
       {/* IA Button */}
-      <Pressable style={styles.iaButton}>
-        <Ionicons name="sparkles-outline" size={18} color="#fff" />
-        <Text style={styles.iaText}>IA Nutritionnelle</Text>
-      </Pressable>
+     <Pressable
+      style={styles.iaButton}
+      onPress={() => {
+  if (subscriptionPlan === "free") {
+    const msg =
+      "⭐️ Passe à Save Eat Premium pour bénéficier de l’IA Nutritionnelle 🤖🥗✨";
+
+    if (Platform.OS === "web") {
+      window.alert(msg);
+    } else {
+      Alert.alert("IA Nutritionnelle", msg);
+    }
+    return;
+  }
+
+  router.push("/ai-chat");
+}}
+>
+  <Ionicons name="sparkles-outline" size={18} color="#fff" />
+  <Text style={styles.iaText}>IA Nutritionnelle</Text>
+</Pressable>
 
       {/* SECTION CAMERA */}
       <View style={{ marginTop: 25, alignItems: "center" }}>
