@@ -493,9 +493,12 @@ const styles = StyleSheet.create({
   },
 
   picker: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
+    backgroundColor: "#26A65B",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor:"#fff",
     marginBottom: 10,
+    
   },
 
   sectionTitle: {

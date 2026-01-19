@@ -56,6 +56,7 @@ export default function ForgotPasswordScreen() {
       <Text style={styles.label}>Adresse email</Text>
       <TextInput
         placeholder="vous@example.com"
+        placeholderTextColor="#7A7A7A"
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"

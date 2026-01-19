@@ -87,6 +87,7 @@ await setDoc(
 
       <TextInput
         placeholder="Email"
+        placeholderTextColor={"#7A7A7A"}
         value={email}
         onChangeText={setEmail}
         style={styles.input}
@@ -97,6 +98,7 @@ await setDoc(
       <View style={styles.passwordContainer}>
         <TextInput
           placeholder="Mot de passe"
+          placeholderTextColor={"#7A7A7A"}
           secureTextEntry={!showPassword}
           value={password}
           onChangeText={setPassword}
@@ -119,6 +121,7 @@ await setDoc(
       <View style={styles.passwordContainer}>
         <TextInput
           placeholder="Confirmer le mot de passe"
+          placeholderTextColor={"#7A7A7A"}
           secureTextEntry={!showConfirmPassword}
           value={confirmPassword}
           onChangeText={setConfirmPassword}

@@ -464,6 +464,7 @@ Ta mission est de créer UNE recette :
             <TextInput
               style={styles.modalInput}
               placeholder="Ex : Poulet, Saumon, Brocoli…"
+              placeholderTextColor="#7A7A7A"
               value={manualInput}
               onChangeText={setManualInput}
             />
